@@ -5,7 +5,7 @@ CONFIG="${HOME}/.backup/config"
 . ${CONFIG}
 
 echo "Checking differences to first backup."
-rsync -n -avz --progress "${MASTER}" "${BK1}"
+rsync -n -avhz --delete --progress "${MASTER}" "${BK1}"
 
 echo "Checking differences to second backup."
-rsync -n -avz --progress "${MASTER}" "${BK2}"
+rsync -n -avhz --delete --progress "${MASTER}" "${BK2}"
