@@ -1,0 +1,27 @@
+Overview
+========
+
+This repository stores some utility scripts I use to automate some 
+tasks, or I use while teaching Programming or Photography Workflow.
+
+Scripts
+=======
+
+backup_catalog
+--------------
+
+Performs a backup of the entire Adobe's Lightroom Catalog and image 
+library to one or two destinations. It assumes the catalog and images 
+share a common ancestor directory.
+
+check_backup
+------------
+
+Verifies which changes will be made to the backup once it is performed.
+
+verify_backup
+-------------
+
+Verify errors on the last backup performed. It does not fixes any 
+error, it only reports and summarizes the errors.
+
