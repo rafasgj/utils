@@ -16,11 +16,11 @@ die() {
 # and I do have some GNU tools installed through Homebrew.
 #
 get_mountpoint() {
-	df -P "$1" | tail -1 | sed "s/  */ /g" | cut -d" " -f6
+	df -P "$1" | tail -1 | sed "s/  */ /g" | cut -d" " -f6 2>/dev/null
 }
 
 get_device() {
-	df -P "$1" | tail -1 | sed "s/  */ /g" | cut -d" " -f1
+	df -P "$1" | tail -1 | sed "s/  */ /g" | cut -d" " -f1 2>/dev/null
 }
 
 is_readonly() {
@@ -65,7 +65,7 @@ fi
 if [ "`is_readonly "${BK2_DEV}"`" == "YES" ]
 then
 	echo "Target is read-only: ${BK2}"
-	USE_BK1='n'
+	USE_BK2='n'
 fi
 
 [ "${USE_BK1}" == "n" -a "${USE_BK2}" == "n" ] && die "No disk available for backup."
@@ -81,10 +81,12 @@ fi
 [ -d "${MASTER}" ] || die "Can't find master: ${MASTER}"
 if [ "${USE_BK1}" == "y" -a ! -d "${BK1}" ]
 then
+	echo "Creating primary backup directory."
 	mkdir -p "${BK1}" || echo "Can't find first backup: ${BK1}"
 fi
 if [ "${USE_BK2}" == "y" -a ! -d "${BK2}" ]
 then
+	echo "Creating secondary backup directory."
 	mkdir -p "${BK2}" || echo "Can't find secondary backup: ${BK2}"
 fi
 
