@@ -1,0 +1,72 @@
+#!/bin/sh
+
+CONFIG="${HOME}/.backup/config"
+
+. ${CONFIG}
+
+# required for sed with non-7bit-ascii characteres.
+LANG="LC_ALL.iso88591"
+
+#
+# We'll ignore rsync progrees messages, files deleted and:
+#     - Mac OS X's DS_Store
+#     - Lightroom preview data (can be rebuilt,  even if it takes time)
+#
+# TODO: remove rsync final report (last 2 lines)
+#
+filelist=`cat "${HOME}/.backup/logs/LAST_BACKUP.log" | sed '
+/^ /d
+/^deleting /d
+/^ *$/d
+/.DS_Store/d
+/Previews.lrdata/d
+'`
+
+count=`echo -e "${filelist}" | wc -l` 
+echo "Verifying ${count} files."
+
+countOK=0
+countERROR=0
+countMISSSRC=0
+countMISSTGT=0
+
+echo -e "${filelist}" | while read file
+do
+	SRC="${MASTER}/${file}"
+	TGT="${BK1}/${file}"
+	
+	if [ -f "${SRC}" -a -f "${TGT}" ]
+	then
+		echo "${file}"
+		srcmd5=`${MD5} "${SRC}"`
+		tgtmd5=`${MD5} "${TGT}"`
+		if [ "${srcmd5}" != "${tgtmd5}" ]
+		then
+			echo "\tChecksum Error"
+			countERROR=$[${countERROR} + 1]
+		else
+			echo "\tOK"
+			countOK=$[${countOK} + 1]
+		fi
+		count=$[${count} - 1]
+		echo "    ${count} files left."
+	else
+		if [ -f "${SRC}" -a ! -f "${TGT}" ]
+		then
+			echo "ERROR: Missing ${file} at target."
+			countMISSTGT=$[${countMISSTGT} + 1]
+		fi
+		if [ ! -f "${SRC}" -a -f "${TGT}" ]
+		then
+			echo "ERROR: Missing ${file} at source."
+			countMISSSRC=$[${countMISSSRC} + 1]
+		fi
+		count=$[${count} - 1]
+	fi
+done
+
+echo "Correct: ${countOK}"
+echo "Errors: ${countERROR}"
+echo "Missing on Target: ${countMISSTGT}"
+echo "Missing on Source: ${countMISSSRC}"
+

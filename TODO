@@ -1,0 +1,8 @@
+- Evaluate "verify" output.
+- include everythnig in a single script.
+- Check if Lightroom is running.
+- Ask Lightroom to gracefully terminate.
+- add script to execute within CRON.
+- Create an UI to display backup information.
+- Allow configuration to be passed as parameters.
+- Allow configuration file to be passed as parameter.
