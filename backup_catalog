@@ -7,6 +7,7 @@ DATE="`date +"%Y-%m-%d"`"
 
 die() {
 	echo "$*"
+	echo "Your MASTER might be in read-only mode. Unmount and remount it to get back to normal operation."
 	exit 1
 }
 
@@ -15,12 +16,29 @@ die() {
 # This implementation currently only works on Mac OS X,
 # and I do have some GNU tools installed through Homebrew.
 #
+get_volume_data() {
+	DATA=""
+	DIR="$1"
+	# On Mac OS X, it is expected that disks are mounted on '/Volumes'.
+	while [ `echo $DIR | awk 'BEGIN{FS="/"}{print NF;}'` -gt 3 ]
+	do
+		DATA=`df -P "$DIR" 2>/dev/null | tail -1 | sed "s/  */ /g"`
+		if [ -z "${DATA}" ]
+		then
+			DIR="`dirname "${DIR}"`"
+		else
+			DIR="/Volumes"
+		fi
+	done
+	echo "${DATA}"
+}
+
 get_mountpoint() {
-	df -P "$1" | tail -1 | sed "s/  */ /g" | cut -d" " -f6 2>/dev/null
+	get_volume_data "$1" | cut -d" " -f6
 }
 
 get_device() {
-	df -P "$1" | tail -1 | sed "s/  */ /g" | cut -d" " -f1 2>/dev/null
+	get_volume_data "$1" | cut -d" " -f1
 }
 
 is_readonly() {
@@ -45,6 +63,8 @@ mount_rw() {
 
 . "${CONFIG}"
 
+echo "Checking devices."
+
 MASTER_DEVICE="`get_device "${MASTER}"`"
 MASTER_MOUNT="`get_mountpoint "${MASTER}"`"
 MASTER_RO="`is_readonly ${MASTER_DEVICE}`"
@@ -54,23 +74,29 @@ BK2_DEV="`get_device "${BK2}"`"
 
 USE_BK1='y'
 USE_BK2='y'
-[ -z "${BK1_DEV}" ] && USE_BK1='n'
 
-if [ "`is_readonly "${BK1_DEV}"`" == "YES" ]
+[ -z "${BK1_DEV}" ] && USE_BK1='n'
+[ -z "${BK2_DEV}" ] && USE_BK2='n'
+
+if [ ! -z "${BK1_DEV}" -a "`is_readonly "${BK1_DEV}"`" == "YES" ]
 then
 	echo "Target is read-only: ${BK1}"
 	USE_BK1='n'
 fi
 
-if [ "`is_readonly "${BK2_DEV}"`" == "YES" ]
+if [ ! -z "${BK2_DEV}" -a "`is_readonly "${BK2_DEV}"`" == "YES" ]
 then
 	echo "Target is read-only: ${BK2}"
 	USE_BK2='n'
 fi
 
-[ "${USE_BK1}" == "n" -a "${USE_BK2}" == "n" ] && die "No disk available for backup."
+if [ "${USE_BK1}" == "n" -a "${USE_BK2}" == "n" ]
+then
+	die "No disk available for backup."
+fi
 
 # make source read-only
+echo "Protecting MASTER by turning it into read-only."
 if [ "${MASTER_RO}" != "YES" ]
 then
 	unmount "${MASTER_DEVICE}" || die "Error unmounting master. Could not make master read-only."
@@ -90,6 +116,8 @@ then
 	mkdir -p "${BK2}" || echo "Can't find secondary backup: ${BK2}"
 fi
 
+[ "$USE_BK1" == "y" ] && echo "Copying to primary backup."
+[ "$USE_BK2" == "y" ] && echo "Copying to secondary backup."
 echo "Starting backup."
 
 # do copies
