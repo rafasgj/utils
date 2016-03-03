@@ -20,7 +20,7 @@ get_volume_data() {
 	DATA=""
 	DIR="$1"
 	# On Mac OS X, it is expected that disks are mounted on '/Volumes'.
-	while [ `echo $DIR | awk 'BEGIN{FS="/"}{print NF;}'` -gt 3 ]
+	while [ `echo $DIR | awk 'BEGIN{FS="/"}{print NF;}'` -gt 2 ]
 	do
 		DATA=`df -P "$DIR" 2>/dev/null | tail -1 | sed "s/  */ /g"`
 		if [ -z "${DATA}" ]
@@ -69,8 +69,22 @@ MASTER_DEVICE="`get_device "${MASTER}"`"
 MASTER_MOUNT="`get_mountpoint "${MASTER}"`"
 MASTER_RO="`is_readonly ${MASTER_DEVICE}`"
 
+echo "Searching ${BK1}... "
 BK1_DEV="`get_device "${BK1}"`"
+if [ -z "$BK1_DEV" ]
+then
+    echo "FAILED."
+else
+    echo "Found device: [${BK1_DEV}]"
+fi
+echo "Searching ${BK2}... "
 BK2_DEV="`get_device "${BK2}"`"
+if [ -z "$BK2_DEV" ]
+then
+    echo "FAILED."
+else
+    echo "Found device: [${BK2_DEV}]"
+fi
 
 USE_BK1='y'
 USE_BK2='y'
@@ -118,6 +132,7 @@ fi
 
 [ "$USE_BK1" == "y" ] && echo "Copying to primary backup."
 [ "$USE_BK2" == "y" ] && echo "Copying to secondary backup."
+
 echo "Starting backup."
 
 # do copies
