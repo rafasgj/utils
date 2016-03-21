@@ -136,8 +136,8 @@ fi
 echo "Starting backup."
 
 # do copies
-HISTORY_DIR="`date +'../history_%Y%m%d_%H%M%S'`"
-RSYNC_OPTS="-avzhWb --progress --delete --backup-dir='${HISTORY_DIR}' "
+HISTORY_DIR="`date +"../history_%Y%m%d_%H%M%S"`"
+RSYNC_OPTS="-avzhWb --progress --delete --backup-dir=${HISTORY_DIR}"
 MASTER_LOG="${LOGDIR}/${DATE}-master.log"
 
 if [ "${USE_BK1}" == "y" ]
