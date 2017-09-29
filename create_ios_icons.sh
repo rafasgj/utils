@@ -3,6 +3,9 @@
 filename=$1
 shift
 
+bg='transparent'
+[ -z "$1" ] || bg="$1"
+
 ext=`echo ${filename} | awk -F. '{ print $NF }' `
 file=`basename ${filename} .${ext}`
 
@@ -13,6 +16,6 @@ do
     sz=${sizes[i]}
     tgt="${file}-${sz}.${ext}"
     convert "${filename}" -monitor -resize "${sz}x${sz}" tmp.png
-    convert tmp.png -gravity center -background transparent -extent "${sz}x${sz}" "${tgt}"
+    convert tmp.png -gravity center -background "${bg}" -extent "${sz}x${sz}" "${tgt}"
     rm tmp.png
 done
