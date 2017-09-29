@@ -25,3 +25,9 @@ verify_backup
 Verify errors on the last backup performed. It does not fixes any 
 error, it only reports and summarizes the errors.
 
+create_ios_icons.sh
+-------------------
+
+Given an image, create several copies of the image with different sizes
+that are required by iOS applications.
+

@@ -1,3 +1,4 @@
+- Do not copy LR catalog to history.
 - Verify deleted files.
 - Evaluate "verify" output.
 - include everythnig in a single script.
