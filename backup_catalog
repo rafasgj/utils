@@ -13,8 +13,7 @@ die() {
 
 #
 # These functions should be "ported" for different OSes.
-# This implementation currently only works on Mac OS X,
-# and I do have some GNU tools installed through Homebrew.
+# This implementation currently only works on macOS.
 #
 get_volume_data() {
 	DATA=""
@@ -61,6 +60,8 @@ mount_rw() {
 	return $?
 }
 
+# Here starts the portable part of the script.
+
 . "${CONFIG}"
 
 echo "Checking devices."
@@ -69,35 +70,35 @@ MASTER_DEVICE="`get_device "${MASTER}"`"
 MASTER_MOUNT="`get_mountpoint "${MASTER}"`"
 MASTER_RO="`is_readonly ${MASTER_DEVICE}`"
 
+report_bk_dev() {
+    if [ -z "$1" ]
+    then
+        echo "FAILED."
+    else
+        echo "Found device: [$1]"
+    fi
+}
+
 echo "Searching ${BK1}... "
 BK1_DEV="`get_device "${BK1}"`"
-if [ -z "$BK1_DEV" ]
-then
-    echo "FAILED."
-else
-    echo "Found device: [${BK1_DEV}]"
-fi
+report_bk_dev ${BK1_DEV}
+
+if [ ! -z ${BK2} ]
 echo "Searching ${BK2}... "
 BK2_DEV="`get_device "${BK2}"`"
-if [ -z "$BK2_DEV" ]
-then
-    echo "FAILED."
-else
-    echo "Found device: [${BK2_DEV}]"
-fi
+report_bk_dev ${BK2_DEV}
 
 USE_BK1='y'
 USE_BK2='y'
 
 [ -z "${BK1_DEV}" ] && USE_BK1='n'
-[ -z "${BK2_DEV}" ] && USE_BK2='n'
-
 if [ ! -z "${BK1_DEV}" -a "`is_readonly "${BK1_DEV}"`" == "YES" ]
 then
 	echo "Target is read-only: ${BK1}"
 	USE_BK1='n'
 fi
 
+[ -z "${BK2_DEV}" ] && USE_BK2='n'
 if [ ! -z "${BK2_DEV}" -a "`is_readonly "${BK2_DEV}"`" == "YES" ]
 then
 	echo "Target is read-only: ${BK2}"
@@ -118,26 +119,28 @@ then
 fi
 
 # check directories
-[ -d "${MASTER}" ] || die "Can't find master: ${MASTER}"
-if [ "${USE_BK1}" == "y" -a ! -d "${BK1}" ]
-then
-	echo "Creating primary backup directory."
-	mkdir -p "${BK1}" || echo "Can't find first backup: ${BK1}"
-fi
-if [ "${USE_BK2}" == "y" -a ! -d "${BK2}" ]
-then
-	echo "Creating secondary backup directory."
-	mkdir -p "${BK2}" || echo "Can't find secondary backup: ${BK2}"
-fi
 
+check_bk_dir() {
+    if [ "$1" == "y" -a ! -d "$2" ]
+    then
+        echo "Creating primary backup directory."
+        mkdir -p "$2" || echo "Can't find first backup: $2"
+    fi
+}
+
+[ -d "${MASTER}" ] || die "Can't find master: ${MASTER}"
+
+check_bk_dir "$USE_BK1" "$BK1"
 [ "$USE_BK1" == "y" ] && echo "Copying to primary backup."
+
+check_bk_dir "$USE_BK2" "$BK2" 
 [ "$USE_BK2" == "y" ] && echo "Copying to secondary backup."
 
 echo "Starting backup."
 
 # do copies
 HISTORY_DIR="`date +"../history_%Y%m%d_%H%M%S"`"
-RSYNC_OPTS="-avzhWb --progress --delete --backup-dir=${HISTORY_DIR}"
+RSYNC_OPTS="-avzhb --progress --delete --delete-during --backup-dir=${HISTORY_DIR}"
 MASTER_LOG="${LOGDIR}/${DATE}-master.log"
 
 if [ "${USE_BK1}" == "y" ]
