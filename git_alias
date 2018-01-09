@@ -1,0 +1,28 @@
+#!/bin/sh
+
+# Useful aliases for Git.
+
+# git description [branch_name]
+#
+# Display description of a branch added with 'git branch --edit-description'
+
+git config --global alias.description '!f() { [ -z "$1" ] && x=$(git symbolic-ref --short HEAD) || x="$1"; git config --get -- "branch.$x.description"; }; f'
+
+# Provide shortcuts for common commands:
+#    co - checkout
+#    ci - commit
+#    st - status
+#    br - branch
+#
+# From Git Basics (https://git-scm.com/book/en/v2/Git-Basics-Git-Aliases)
+git config --global alias.co checkout
+git config --global alias.br branch
+git config --global alias.ci commit
+git config --global alias.st status
+
+# git unstage file ...
+#
+# Unstage a file added to the stage area. (From Git Basics)
+
+git config --global alias.unstage 'reset HEAD --'
+
