@@ -81,12 +81,11 @@ report_bk_dev() {
 
 echo "Searching ${BK1}... "
 BK1_DEV="`get_device "${BK1}"`"
-report_bk_dev ${BK1_DEV}
+report_bk_dev "${BK1_DEV}" 
 
-if [ ! -z ${BK2} ]
 echo "Searching ${BK2}... "
 BK2_DEV="`get_device "${BK2}"`"
-report_bk_dev ${BK2_DEV}
+report_bk_dev "${BK2_DEV}"
 
 USE_BK1='y'
 USE_BK2='y'
