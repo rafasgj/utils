@@ -1,5 +1,11 @@
 #!/bin/sh
 
+if [ $# -ne 2 ]
+then
+    echo "usage: `basename $0` <filename> <output prefix>"
+    exit 1
+fi
+
 file=$1
 shift
 
