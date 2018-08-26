@@ -31,3 +31,9 @@ create_ios_icons.sh
 Given an image, create several copies of the image with different sizes
 that are required by iOS applications.
 
+make_iso.sh
+-----------
+
+Given a directory, create an ISO image suited for macOS, Linux and
+Windows, using macOS _hidutil_.
+
