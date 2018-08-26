@@ -77,7 +77,7 @@ backup_if_required() {
         cat << EOF > "${BKP_EXCL}"
 .Spotlight*/
 .DocumentRevisions*/
-.DS_Store/
+.DS_Store
 .TemporaryItems
 .Trashes
 .apdisk
@@ -85,9 +85,9 @@ backup_if_required() {
 EOF
 
         LOG="$4"
-        HISTORY_DIR="`date +"../history_%Y%m%d_%H%M%S"`"
+        HISTORY_DIR="`date +"../history/history_%Y%m%d_%H%M%S"`"
         RSYNC_OPTS="-avhb --progress --delete --delete-during --backup-dir=${HISTORY_DIR}"
-        EXCLUDE_OPTS="--exclude-from=${BKP_EXCL} --dry-run"
+        EXCLUDE_OPTS="--exclude-from=${BKP_EXCL}"
         echo "Copying MASTER to $3 BACKUP." | tee $LOG
         time rsync ${RSYNC_OPTS} ${EXCLUDE_OPTS} "${MASTER}" "$2" | tee -a $LOG
         rm -f /tmp/backupcatalog.excl
