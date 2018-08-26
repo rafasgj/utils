@@ -5,6 +5,8 @@ LOGDIR="${HOME}/.backup/logs/"
 
 DATE="`date +"%Y-%m-%d"`"
 
+BKP_EXCL='/tmp/backup_catalog.excl'
+
 die() {
 	echo "$*"
 	echo "Your MASTER might be in read-only mode. Unmount and remount it to get back to normal operation."
@@ -60,15 +62,37 @@ mount_rw() {
 	return $?
 }
 
-# Here starts the portable part of the script.
+# check directories
+check_bk_dir() {
+    if [ "$1" == "y" -a ! -d "$2" ]
+    then
+        echo "Creating primary backup directory."
+        mkdir -p "$2" || echo "Can't find first backup: $2"
+    fi
+}
 
-. "${CONFIG}"
+backup_if_required() {
+    if [ "$1" == "y" ]
+    then
+        cat << EOF > "${BKP_EXCL}"
+.Spotlight*/
+.DocumentRevisions*/
+.DS_Store/
+.TemporaryItems
+.Trashes
+.apdisk
+.fseventsd
+EOF
 
-echo "Checking devices."
-
-MASTER_DEVICE="`get_device "${MASTER}"`"
-MASTER_MOUNT="`get_mountpoint "${MASTER}"`"
-MASTER_RO="`is_readonly ${MASTER_DEVICE}`"
+        LOG="$4"
+        HISTORY_DIR="`date +"../history_%Y%m%d_%H%M%S"`"
+        RSYNC_OPTS="-avhb --progress --delete --delete-during --backup-dir=${HISTORY_DIR}"
+        EXCLUDE_OPTS="--exclude-from=${BKP_EXCL} --dry-run"
+        echo "Copying MASTER to $3 BACKUP." | tee $LOG
+        time rsync ${RSYNC_OPTS} ${EXCLUDE_OPTS} "${MASTER}" "$2" | tee -a $LOG
+        rm -f /tmp/backupcatalog.excl
+    fi
+}
 
 report_bk_dev() {
     if [ -z "$1" ]
@@ -79,92 +103,94 @@ report_bk_dev() {
     fi
 }
 
-echo "Searching ${BK1}... "
-BK1_DEV="`get_device "${BK1}"`"
-report_bk_dev "${BK1_DEV}" 
+# Here starts the portable part of the script.
 
-echo "Searching ${BK2}... "
-BK2_DEV="`get_device "${BK2}"`"
-report_bk_dev "${BK2_DEV}"
+. "${CONFIG}"
 
-USE_BK1='y'
-USE_BK2='y'
+echo "Checking devices."
 
-[ -z "${BK1_DEV}" ] && USE_BK1='n'
-if [ ! -z "${BK1_DEV}" -a "`is_readonly "${BK1_DEV}"`" == "YES" ]
-then
-	echo "Target is read-only: ${BK1}"
-	USE_BK1='n'
-fi
+for MASTER in ${MASTER_DISKS[@]}
+do
+    echo "Master disk: ${MASTER}"
+    MASTER_DEVICE="`get_device "${MASTER}"`"
+    MASTER_MOUNT="`get_mountpoint "${MASTER}"`"
+    MASTER_RO="`is_readonly ${MASTER_DEVICE}`"
 
-[ -z "${BK2_DEV}" ] && USE_BK2='n'
-if [ ! -z "${BK2_DEV}" -a "`is_readonly "${BK2_DEV}"`" == "YES" ]
-then
-	echo "Target is read-only: ${BK2}"
-	USE_BK2='n'
-fi
-
-if [ "${USE_BK1}" == "n" -a "${USE_BK2}" == "n" ]
-then
-	die "No disk available for backup."
-fi
-
-# make source read-only
-echo "Protecting MASTER by turning it into read-only."
-if [ "${MASTER_RO}" != "YES" ]
-then
-	unmount "${MASTER_DEVICE}" || die "Error unmounting master. Could not make master read-only."
-	mount_ro "${MASTER_DEVICE}" || die "Could not make master read-only."
-fi
-
-# check directories
-
-check_bk_dir() {
-    if [ "$1" == "y" -a ! -d "$2" ]
+    if [ -z "$MASTER_DEVICE" ]
     then
-        echo "Creating primary backup directory."
-        mkdir -p "$2" || echo "Can't find first backup: $2"
+        echo "No device found for ${MASTER}"
+        continue
     fi
-}
 
-[ -d "${MASTER}" ] || die "Can't find master: ${MASTER}"
+    echo "Master device: ${MASTER_DEVICE}"
+    echo "Mount point: ${MASTER_MOUNT}"
+    echo "Read only : ${MASTER_RO}"
 
-check_bk_dir "$USE_BK1" "$BK1"
-[ "$USE_BK1" == "y" ] && echo "Copying to primary backup."
+    echo "Searching ${BK1}... "
+    BK1_DEV="`get_device "${BK1}"`"
+    report_bk_dev "${BK1_DEV}"
 
-check_bk_dir "$USE_BK2" "$BK2" 
-[ "$USE_BK2" == "y" ] && echo "Copying to secondary backup."
+    echo "Searching ${BK2}... "
+    BK2_DEV="`get_device "${BK2}"`"
+    report_bk_dev "${BK2_DEV}"
 
-echo "Starting backup."
+    USE_BK1='y'
+    USE_BK2='y'
 
-# do copies
-HISTORY_DIR="`date +"../history_%Y%m%d_%H%M%S"`"
-RSYNC_OPTS="-avhb --progress --delete --delete-during --backup-dir=${HISTORY_DIR}"
-MASTER_LOG="${LOGDIR}/${DATE}-master.log"
+    BKDIR=`expr "${MASTER}" : "${MASTER_MOUNT}"'\(.*\)'`
+    BKVOLUME=`expr "${MASTER_MOUNT}" : '/Volumes/\(.*\)'`
+    BK1_DIR="${BK1}/${BKVOLUME}/${BKDIR}"
+    BK2_DIR="${BK2}/${BKVOLUME}/${BKDIR}"
 
-if [ "${USE_BK1}" == "y" ]
-then
-	echo "Copying MASTER to PRIMARY BACKUP." | tee "${LOGDIR}/${DATE}-master.log"
-	time rsync ${RSYNC_OPTS} "${MASTER}" "${BK1}" | tee -a "${LOGDIR}/${DATE}-master.log"
-	if [ "${USE_BK2}" == "y" ]
-	then
-		echo "Copying PRIMARY BACKUP to SECONDARY BACKUP." | tee "${LOGDIR}/${DATE}-secondary.log"
-		time rsync ${RSYNC_OPTS} "${BK1}" "${BK2}" | tee -a "${LOGDIR}/${DATE}-secondary.log"
-	fi
-elif [ "${USUE_BK2}" == "y" ]
-then
-	MASTER_LOG="${LOGDIR}/${DATE}-master-secondary.log"
-	echo "Copying MASTER to SECONDARY BACKUP." | tee "${LOGDIR}/${DATE}-master-secondary.log"
-	time rsync ${RSYNC_OPTS} "${MASTER}" "${BK2}" | tee -a "${LOGDIR}/${DATE}-master-secondary.log"
-fi
+    [ -z "${BK1_DEV}" ] && USE_BK1='n'
+    if [ ! -z "${BK1_DEV}" -a "`is_readonly "${BK1_DEV}"`" == "YES" ]
+    then
+    	echo "Target is read-only: ${BK1}"
+    	USE_BK1='n'
+    fi
 
-# mark last backup log
-ln -snf "${MASTER_LOG}" "${LOGDIR}/LAST_BACKUP.log"
+    [ -z "${BK2_DEV}" ] && USE_BK2='n'
+    if [ ! -z "${BK2_DEV}" -a "`is_readonly "${BK2_DEV}"`" == "YES" ]
+    then
+    	echo "Target is read-only: ${BK2}"
+    	USE_BK2='n'
+    fi
 
-# make source read-write again
-if [ "${MASTER_RO}" != "YES" ]
-then
-	unmount "${MASTER_DEVICE}" || die "Error unmounting master. Could not make master RW again."
-	mount_rw "${MASTER_DEVICE}" || die "Could not make master RW again."
-fi
+    if [ "${USE_BK1}" == "n" -a "${USE_BK2}" == "n" ]
+    then
+    	die "No disk available for backup."
+    fi
 
+    # make source read-only
+    echo "Protecting MASTER by turning it into read-only."
+    if [ "${MASTER_RO}" != "YES" ]
+    then
+    	unmount "${MASTER_DEVICE}" || die "Error unmounting master. Could not make master read-only."
+    	mount_ro "${MASTER_DEVICE}" || die "Could not make master read-only."
+    fi
+
+    [ -d "${MASTER}" ] || die "Can't find master: ${MASTER}"
+
+    check_bk_dir "$USE_BK1" "$BK1_DIR"
+    [ "$USE_BK1" == "y" ] && echo "Copying to primary backup: ${BK1_DIR}."
+
+    check_bk_dir "$USE_BK2" "$BK2_DIR"
+    [ "$USE_BK2" == "y" ] && echo "Copying to secondary backup: ${BK2_DIR}."
+
+    MASTER_LOG="${LOGDIR}/${DATE}-master.log"
+
+    # perform backup
+    echo "Starting backup."
+    backup_if_required "${USE_BK1}" "${BK1_DIR}" "PRIMARY" "${MASTER_LOG}"
+    backup_if_required "${USE_BK2}" "${BK2_DIR}" "SECONDARY" "${MASTER_LOG}"
+
+    # mark last backup log
+    ln -snf "${MASTER_LOG}" "${LOGDIR}/LAST_BACKUP.log"
+
+    # make source read-write again
+    if [ "${MASTER_RO}" != "YES" ]
+    then
+    	unmount "${MASTER_DEVICE}" || die "Error unmounting master. Could not make master RW again."
+    	mount_rw "${MASTER_DEVICE}" || die "Could not make master RW again."
+    fi
+done
