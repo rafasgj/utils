@@ -10,9 +10,26 @@ Scripts
 backup_catalog
 --------------
 
-Performs a backup of the entire Adobe's Lightroom Catalog and image 
-library to one or two destinations. It assumes the catalog and images 
+Performs a backup of the entire Adobe's Lightroom Catalog and image
+library to one or two destinations. It assumes the catalog and images
 share a common ancestor directory.
+
+### Configuration
+
+The following variables must be configured in the file
+`${HOME}/.config/backup_catalog/config`:
+
+* MASTER_DISKS:
+    An array of master directories. For example, a disk name "Images",
+    with two directories "catalog" and "documents", and only catalog is
+    to be backed up would give an entry like `MASTER_DISKS=("Images/catalog")`
+    or `MASTER_DISKS=("/Volumes/Images/catalog")`. Multiple entres are
+    separated by `spaces`.
+
+* BK1 and BK2:
+    The name or mount point of the two backup disks. Example: `BK1=Backup_1`
+    or `BK1=/Volumes/Backup_1`.
+
 
 check_backup
 ------------
