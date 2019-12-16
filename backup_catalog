@@ -1,7 +1,7 @@
 #!/bin/sh
 
-CONFIG="${HOME}/.backup/config"
-LOGDIR="${HOME}/.backup/logs/"
+CONFIG="${HOME}/.config/backup_catalog/config"
+LOGDIR="${HOME}/.config/backup_catagol/logs/"
 
 DATE="`date +"%Y-%m-%d"`"
 
@@ -20,6 +20,7 @@ die() {
 get_volume_data() {
 	DATA=""
 	DIR="$1"
+
 	# On Mac OS X, it is expected that disks are mounted on '/Volumes'.
 	while [ `echo $DIR | awk 'BEGIN{FS="/"}{print NF;}'` -gt 2 ]
 	do
@@ -88,8 +89,9 @@ EOF
         HISTORY_DIR="`date +"../history/history_%Y%m%d_%H%M%S"`"
         RSYNC_OPTS="-avhb --progress --delete --delete-during --backup-dir=${HISTORY_DIR}"
         EXCLUDE_OPTS="--exclude-from=${BKP_EXCL}"
-        echo "Copying MASTER to $3 BACKUP." | tee $LOG
-        time rsync ${RSYNC_OPTS} ${EXCLUDE_OPTS} "${MASTER}" "$2" | tee -a $LOG
+				mkdir -p "`dirname ${LOG}`"
+        echo "Copying MASTER to $3 BACKUP." | tee ${LOG}
+        time rsync ${RSYNC_OPTS} ${EXCLUDE_OPTS} "${MASTER}" "$2" | tee -a ${LOG}
         rm -f /tmp/backupcatalog.excl
     fi
 }
@@ -103,15 +105,27 @@ report_bk_dev() {
     fi
 }
 
+fix_mount_prefix() {
+	if [ -z "`expr "/Volumes" : "$1"'\(.*\)'`" ]
+	then
+		  echo "/Volumes/$1"
+  else
+		  echo "$1"
+	fi
+}
+
 # Here starts the portable part of the script.
 
-. "${CONFIG}"
+[ -f "${CONFIG}" ] && . "${CONFIG}"
 
 echo "Checking devices."
 
 for MASTER in ${MASTER_DISKS[@]}
 do
     echo "Master disk: ${MASTER}"
+
+		MASTER="`fix_mount_prefix "$MASTER"`"
+
     MASTER_DEVICE="`get_device "${MASTER}"`"
     MASTER_MOUNT="`get_mountpoint "${MASTER}"`"
     MASTER_RO="`is_readonly ${MASTER_DEVICE}`"
@@ -127,10 +141,12 @@ do
     echo "Read only : ${MASTER_RO}"
 
     echo "Searching ${BK1}... "
+		BK1="`fix_mount_prefix "$BK1"`"
     BK1_DEV="`get_device "${BK1}"`"
     report_bk_dev "${BK1_DEV}"
 
     echo "Searching ${BK2}... "
+		BK2="`fix_mount_prefix "$BK2"`"
     BK2_DEV="`get_device "${BK2}"`"
     report_bk_dev "${BK2_DEV}"
 
