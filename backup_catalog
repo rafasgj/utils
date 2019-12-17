@@ -1,7 +1,8 @@
 #!/bin/sh
 
-CONFIG="${HOME}/.config/backup_catalog/config"
-LOGDIR="${HOME}/.config/backup_catagol/logs/"
+CONFIG_DIR="${HOME}/.config/backup_catalog/"
+CONFIG="${CONFIG_DIR}/config"
+LOGDIR="${CONFIG_DIR}/logs/"
 
 DATE="`date +"%Y-%m-%d"`"
 
