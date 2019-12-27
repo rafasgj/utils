@@ -8,6 +8,8 @@ DATE="`date +"%Y-%m-%d"`"
 
 BKP_EXCL='/tmp/backup_catalog.excl'
 
+[[ "$@" =~ "--debug" ]] && DEBUG="y" || DEBUG='n'
+
 die() {
 	echo "$*"
 	echo "Your MASTER might be in read-only mode. Unmount and remount it to get back to normal operation."
@@ -85,14 +87,15 @@ backup_if_required() {
 .apdisk
 .fseventsd
 EOF
-
+				[ "$DEBUG" == "y" ] && DBG="--dry-run" || DBG=""
         LOG="$4"
         HISTORY_DIR="`date +"../history/history_%Y%m%d_%H%M%S"`"
         RSYNC_OPTS="-avhb --progress --delete --delete-during --backup-dir=${HISTORY_DIR}"
         EXCLUDE_OPTS="--exclude-from=${BKP_EXCL}"
 				mkdir -p "`dirname ${LOG}`"
-        echo "Copying MASTER to $3 BACKUP." | tee ${LOG}
-        time rsync ${RSYNC_OPTS} ${EXCLUDE_OPTS} "${MASTER}" "$2" | tee -a ${LOG}
+				[ ! -f "${LOG}" ] && touch "${LOG}"
+        echo "Copying MASTER to $3 BACKUP." | tee -a "${LOG}"
+				time rsync ${DBG} ${RSYNC_OPTS} ${EXCLUDE_OPTS} "${MASTER}" "$2" | tee -a "${LOG}"
         rm -f /tmp/backupcatalog.excl
     fi
 }
@@ -121,6 +124,17 @@ fix_mount_prefix() {
 
 echo "Checking devices."
 
+echo "Searching ${BK1}... "
+BK1="`fix_mount_prefix "$BK1"`"
+BK1_DEV="`get_device "${BK1}"`"
+report_bk_dev "${BK1_DEV}"
+
+echo "Searching ${BK2}... "
+BK2="`fix_mount_prefix "$BK2"`"
+BK2_DEV="`get_device "${BK2}"`"
+report_bk_dev "${BK2_DEV}"
+
+
 for MASTER in ${MASTER_DISKS[@]}
 do
     echo "Master disk: ${MASTER}"
@@ -140,16 +154,6 @@ do
     echo "Master device: ${MASTER_DEVICE}"
     echo "Mount point: ${MASTER_MOUNT}"
     echo "Read only : ${MASTER_RO}"
-
-    echo "Searching ${BK1}... "
-		BK1="`fix_mount_prefix "$BK1"`"
-    BK1_DEV="`get_device "${BK1}"`"
-    report_bk_dev "${BK1_DEV}"
-
-    echo "Searching ${BK2}... "
-		BK2="`fix_mount_prefix "$BK2"`"
-    BK2_DEV="`get_device "${BK2}"`"
-    report_bk_dev "${BK2_DEV}"
 
     USE_BK1='y'
     USE_BK2='y'
