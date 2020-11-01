@@ -54,3 +54,10 @@ make_iso.sh
 Given a directory, create an ISO image suited for macOS, Linux and
 Windows, using macOS _hidutil_.
 
+pysum.sh
+--------
+
+Computes the hash sum of a file or the stdin. By default, uses MD5 as
+hashing algorithm. Other algorithms available are sha224, sha256,
+sha384 and sha512. Link to md5sum, or sha256sum to change the algorithm
+used.
